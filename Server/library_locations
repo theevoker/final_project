@@ -1,0 +1,11 @@
+%0%.%1%.%0
+<socket.socket fd=992, family=2, type=1, proto=0, laddr=('127.0.0.1', 1111), raddr=('127.0.0.1', 63870)>%12%0.1.0
+<socket.socket fd=1012, family=2, type=1, proto=0, laddr=('127.0.0.1', 1111), raddr=('127.0.0.1', 64105)>%12%0.1.0
+<socket.socket fd=988, family=2, type=1, proto=0, laddr=('127.0.0.1', 1111), raddr=('127.0.0.1', 64299)>%1%2%
+<socket.socket fd=976, family=2, type=1, proto=0, laddr=('127.0.0.1', 1111), raddr=('127.0.0.1', 64512)>%1%2%
+<socket.socket fd=992, family=2, type=1, proto=0, laddr=('127.0.0.1', 1111), raddr=('127.0.0.1', 64586)>%1%2%
+<socket.socket fd=920, family=2, type=1, proto=0, laddr=('127.0.0.1', 1111), raddr=('127.0.0.1', 64838)>%1%2%
+<socket.socket fd=948, family=2, type=1, proto=0, laddr=('127.0.0.1', 1111), raddr=('127.0.0.1', 64938)>%1%2
+<socket.socket fd=988, family=2, type=1, proto=0, laddr=('127.0.0.1', 1111), raddr=('127.0.0.1', 65141)>%1%2
+<socket.socket fd=984, family=2, type=1, proto=0, laddr=('127.0.0.1', 1111), raddr=('127.0.0.1', 61226)>%1%2
+<socket.socket fd=984, family=2, type=1, proto=0, laddr=('127.0.0.1', 1111), raddr=('127.0.0.1', 61226)>%1%2
