@@ -1,5 +1,7 @@
 import socket
 from threading import Thread
+import geocoder
+
 
 class Library:
     def __init__(self):
@@ -12,8 +14,8 @@ class Library:
     #general methods
     @staticmethod
     def get_location():
-        print("whoa look i'm getting my location")
-        return "12"
+        g = geocoder.ip('me')
+        return str(g)
 
     @staticmethod
     def write_file(file_name, change):
