@@ -13,7 +13,7 @@ def index():
 def get():
     book = request.args["book"]
     print(book)
-    libraries = ", ".join(client.search(book))
+    libraries = "<br>".join(client.search(book))
     return render_template("search.html", libraries = libraries)
 
 if __name__ == '__main__':
