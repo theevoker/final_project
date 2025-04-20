@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>search</title>
+</head>
+
+<body>
+<form action="/add_book/">
+  <input type="text" placeholder="Add book.." name="book">
+  <button type="submit">Submit</button>
+</form>
+<form action="/remove_book/">
+  <input type="text" placeholder="Remove book.." name="book">
+  <button type="submit">Submit</button>
+</form>
+
+<p><br><br>{{ result | safe }}</p>
+
+
+</body>
+
+</html>

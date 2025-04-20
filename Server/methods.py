@@ -3,7 +3,11 @@ import json
 from threading import Thread
 import time
 import random
+
+from library.param import WEBSITE_PORT
 from param import *
+import ssl
+from geopy.geocoders import Nominatim
 
 class File: # this class is for writing / reading JSON file, later will be replaced by a DB class
     @staticmethod
@@ -17,14 +21,18 @@ class File: # this class is for writing / reading JSON file, later will be repla
         with open(file_name, 'w', encoding='utf-8') as file:
             json.dump(change, file, ensure_ascii=False, indent=4)
 
-class Library(File): # arranges the library connections
+class Server(File): # arranges the library connections
     def __init__(self):
+        Thread(target=self.ClientWebsite, args=(self,)).start()
         self.numbers = [] # which IDs are occupied
         self.active_numbers = [] # which IDs are currently in use
 
         self.books = self.read_file("books.JSON") # which books are in which libraries, is a DICT
-        
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # sets up server
+
+        temp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # sets up server
+        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
+        self.socket = context.wrap_socket(temp_socket, server_side=True)
         self.socket.bind((IP, PORT)) # "
         self.socket.listen() # "
         print("ran")
@@ -69,7 +77,7 @@ class Library(File): # arranges the library connections
         print("book update activated")
 
         lib[0].send(f"BOOKS".encode()) # requests for books
-        books = lib[0].recv(1024).decode() # receives books
+        books = lib[0].recv(1024).decode()[6:] # receives books
         print(books, "    | list of books")
 
         library_list = self.read_file("libraries.JSON") # a bunch of nonsense
@@ -84,6 +92,10 @@ class Library(File): # arranges the library connections
                     self.books[book].append(lib[1])
             else:
                 self.books[book] = [lib[1], ]
+
+        for book in self.books.keys(): # this check whether everything is correct
+            if lib in self.books[book] and book not in library_list[lib[1]]:
+                self.books[book].remove(lib)
 
         self.write_file("books.JSON", self.books)
 
@@ -107,7 +119,34 @@ class Library(File): # arranges the library connections
             lib[0].close()
             self.active_numbers.remove(lib[1])
 
-class Client(File): # this is for the HTTP website, pretty straight - forward
+
+            '''from here on out it's a flask server'''
+    @staticmethod
+    def ClientWebsite(self):
+        from flask import Flask, request, render_template
+
+        app = Flask(__name__)
+        client = Client()
+
+        @app.route('/')
+        def index():
+            return render_template("index.html")
+
+        @app.route('/search/', methods=['GET'])
+        def get():
+            book = request.args["book"]
+            print(book)
+            try:
+                locations = [str(item) for item in client.search(book)]
+            except KeyError:
+                locations = ["book not found"]
+            return render_template("search.html", locations=locations, book=book)
+
+        app.run(ssl_context=('cert.pem', 'key.pem'), host=IP, port=WEBSITE_PORT)
+
+class Client(File): # this is for the HTTP website, pretty straight-forward
     def search(self, book):
-        print(self.read_file("books.JSON")[book])
-        return tuple(self.read_file("books.JSON")[book])
+        locations = self.read_file("locations.JSON")
+        geolocator = Nominatim(user_agent="library_bullshit_yay")
+        print([geolocator.reverse(locations[lib]) for lib in self.read_file("books.JSON")[book]])
+        return tuple([geolocator.reverse(locations[lib]) for lib in self.read_file("books.JSON")[book]])

@@ -10,8 +10,11 @@
   <input type="text" placeholder="Search.." name="book">
   <button type="submit">Submit</button>
 </form>
-
-<p><br><br>{{ libraries }}</p>
+<h1><br> {{ book }}</h1>
+<p><br><br>{% for line in locations %}
+{{ line }}
+<br />
+{% endfor %}</p>
 
 
 </body>

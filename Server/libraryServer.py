@@ -1,4 +1,4 @@
-from methods import Library
+from methods import Server
 
 if __name__ == '__main__':
-    Library()
+    Server()

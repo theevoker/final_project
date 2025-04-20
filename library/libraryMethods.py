@@ -4,6 +4,7 @@ import json
 import os
 from requests import get
 from param import *
+import ssl
 
 
 class Library:
@@ -11,7 +12,7 @@ class Library:
         self.ID = ""
         self.books = []
         self.book_changed = False
-        Thread(target=self.run).start() # connection with server
+        Thread(target=self.flask).start() # connection with server
         Thread(target=self.serv_conn).start() # add and removes books
 
 
@@ -54,9 +55,12 @@ class Library:
 
 
     def serv_conn(self): # arranges connection with server
-        self.books = list(json.load(open("file.JSON", 'r')).values())[0] # lists books in library
         location = self.get_location() # gets location
-        con = socket.socket()# connects to server
+        temp_con = socket.socket()# connects to server
+        context = ssl.create_default_context()
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+        con = context.wrap_socket(temp_con, server_hostname=IP)
         con.connect((IP, PORT))
 
         print(con.recv(1024).decode()) # the login thing
@@ -64,6 +68,8 @@ class Library:
             self.set_new_lib(con)
         else:
             self.lib_exist(con)
+
+        self.books = list(json.load(open("file.JSON", 'r')).values())[0]
 
         con.send("worked".encode())
         while True: # yay loop wooooooo
@@ -80,26 +86,44 @@ class Library:
                     self.book_changed = False
             elif quarry == "BOOKS": # sends books
                 print("%".join(self.books))
-                con.send("%".join(self.books).encode())
+                con.send(("books:"+"%".join(self.books)).encode())
     #physical methods
     def add_book(self, book): # adds book to file
         self.books.append(book)
-        self.write_file("file.JSON", self.books)
+        self.write_file("file.JSON", {self.ID:self.books})
         self.book_changed = True
 
 
     def remove_book(self, book): # you won't believe what this function does
         self.books.remove(book)
-        self.write_file("file.JSON", self.books)
+        self.write_file("file.JSON", {self.ID:self.books})
         self.book_changed = True
 
-    def run(self): # this is the physical function, which doesn't matter
-        while True:
-            print("what do you want to do? (1 for adding book anything else for lending book)")
-            if input() == "1":
-                self.add_book(input())
+    def flask(self):
+        from flask import Flask, render_template, request
+
+        app = Flask(__name__)
+
+        @app.route('/')
+        def index():
+            return render_template("index.html")
+
+        @app.route('/add_book/', methods=['GET'])
+        def add_book():
+            book = request.args["book"]
+            print(book)
+            self.add_book(book)
+            return render_template("result.html", result="Book added successfully")
+
+        @app.route('/remove_book/', methods=['GET'])
+        def remove_book():
+            book = request.args["book"]
+            print(book)
+            try:
+                self.remove_book(book)
+            except ValueError:
+                return render_template("result.html", result="Book not found")
             else:
-                try:
-                    self.remove_book(input())
-                except ValueError:
-                    print("book does not exist")
+                return render_template("result.html", result="Book removed")
+
+        app.run()
