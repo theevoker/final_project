@@ -10,10 +10,10 @@ import ssl
 class Library:
     def __init__(self):
         self.ID = ""
+        self.file = "file.JSON"
         self.books = []
         self.book_changed = False
-        Thread(target=self.flask).start() # connection with server
-        Thread(target=self.serv_conn).start() # add and removes books
+        Thread(target=self.serv_conn).start() # connection with server
 
 
     #general methods
@@ -43,7 +43,7 @@ class Library:
         print(self.ID)
 
     def lib_exist(self, con): # guess what
-        libraries = json.load(open("file.JSON", 'r'))
+        libraries = json.load(open(self.file, 'r'))
         con.send(list(libraries.keys())[0].encode()) # sends ID
         ans = con.recv(1024).decode() # receives either the OK or a new ID
         print(ans)
@@ -51,6 +51,9 @@ class Library:
             self.ID = list(libraries.keys())[0] # sets ID
         else:
             self.ID = ans # sets given ID as ID
+            self.file = self.ID + ".json"
+            with open(self.file, 'x+') as file:
+                file.write('{\n    "books": []\n}')
         print(self.ID)
 
 
@@ -64,14 +67,16 @@ class Library:
         con.connect((IP, PORT))
 
         print(con.recv(1024).decode()) # the login thing
-        if not os.path.isfile('file.JSON'):
+        if not os.path.isfile(self.file):
             self.set_new_lib(con)
         else:
             self.lib_exist(con)
 
-        self.books = list(json.load(open("file.JSON", 'r')).values())[0]
+        self.books = list(json.load(open(self.file, 'r')).values())[0]
 
         con.send("worked".encode())
+
+        Thread(target=self.flask).start()
         while True: # yay loop wooooooo
             quarry = con.recv(1024).decode() # server asks for something
             print(quarry)
@@ -90,13 +95,13 @@ class Library:
     #physical methods
     def add_book(self, book): # adds book to file
         self.books.append(book)
-        self.write_file("file.JSON", {self.ID:self.books})
+        self.write_file(self.file, {self.ID:self.books})
         self.book_changed = True
 
 
     def remove_book(self, book): # you won't believe what this function does
         self.books.remove(book)
-        self.write_file("file.JSON", {self.ID:self.books})
+        self.write_file(self.file, {self.ID:self.books})
         self.book_changed = True
 
     def flask(self):
@@ -126,4 +131,4 @@ class Library:
             else:
                 return render_template("result.html", result="Book removed")
 
-        app.run()
+        app.run(port=int(self.ID))

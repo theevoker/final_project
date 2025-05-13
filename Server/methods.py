@@ -23,9 +23,8 @@ class File: # this class is for writing / reading JSON file, later will be repla
 
 class Server(File): # arranges the library connections
     def __init__(self):
-        Thread(target=self.ClientWebsite, args=(self,)).start()
-        self.numbers = [] # which IDs are occupied
-        self.active_numbers = [] # which IDs are currently in use
+        Thread(target=self.ClientWebsite, args=()).start()
+        self.active_libs = [] # which IDs are currently in use
 
         self.books = self.read_file("books.JSON") # which books are in which libraries, is a DICT
 
@@ -43,7 +42,7 @@ class Server(File): # arranges the library connections
     def get_new_ID(self, soc): # gets a new ID that's not used for the new library
         while True:
             rand = str(random.randint(1111, 9999))
-            if not rand in self.numbers:
+            if not rand in self.read_file("libraries.JSON").keys():
                 soc.send(rand.encode())
                 break
         return rand
@@ -55,22 +54,22 @@ class Server(File): # arranges the library connections
         print(ans, "    | this is the answer for the login question")
         if ans == "new lib":
             num = self.get_new_ID(soc) # gets a new ID for the library
-            self.numbers.append(num) # adds number to both self.numbers and self.active_numbers
-            self.active_numbers.append(num)
-            print(self.active_numbers, "     | active numbers")
+            self.active_libs.append(num) # adds number to both self.numbers and self.active_numbers
+            print(self.active_libs, "     | active numbers")
         else: # if it's a number
-            if ans in self.active_numbers: # if so, the library can't use this ID
+            if ans in self.active_libs: # if so, the library can't use this ID
                 num = self.get_new_ID(soc) #" "
                 print(num, "     | active numbers")
             else: # meaning ID is open
                 num = ans # sets up this libraries number
                 soc.send("True".encode()) # this ensures the library that it's fine
-                self.active_numbers.append(num) # "
-                print(self.active_numbers, "     | active numbers")
+                self.active_libs.append(num) # "
+                print(self.active_libs, "     | active numbers")
         print(soc.recv(1024).decode(), "    | checks if everything is correct")
         self.book_update((soc, num)) # loads the new library's books
         while True:
-            self.check_connection((soc, num)) # runs main function
+            if self.check_connection((soc, num)): # runs main function
+                break
             time.sleep(5) # waits, because my computer is slow af and I don't want it to die
 
     def book_update(self, lib): # load a library's books into JSON file
@@ -117,16 +116,20 @@ class Server(File): # arranges the library connections
         except OSError: # exception for when the library crashes/ disconnects
             print("closed")
             lib[0].close()
-            self.active_numbers.remove(lib[1])
+            self.active_libs.remove(lib[1])
 
+            #removing it
+            libraries_list = self.read_file("libraries.json")
+            libraries_list.pop(lib[1], None)
+            self.write_file("libraries.JSON", libraries_list)
+            return True
 
             '''from here on out it's a flask server'''
-    @staticmethod
+
     def ClientWebsite(self):
         from flask import Flask, request, render_template
 
         app = Flask(__name__)
-        client = Client()
 
         @app.route('/')
         def index():
@@ -137,16 +140,23 @@ class Server(File): # arranges the library connections
             book = request.args["book"]
             print(book)
             try:
-                locations = [str(item) for item in client.search(book)]
+                locations = self.search(book)
             except KeyError:
                 locations = ["book not found"]
             return render_template("search.html", locations=locations, book=book)
 
         app.run(ssl_context=('cert.pem', 'key.pem'), host=IP, port=WEBSITE_PORT)
 
-class Client(File): # this is for the HTTP website, pretty straight-forward
     def search(self, book):
         locations = self.read_file("locations.JSON")
-        geolocator = Nominatim(user_agent="library_bullshit_yay")
-        print([geolocator.reverse(locations[lib]) for lib in self.read_file("books.JSON")[book]])
-        return tuple([geolocator.reverse(locations[lib]) for lib in self.read_file("books.JSON")[book]])
+        geolocator = Nominatim(user_agent="library_useragent")
+        result = []
+        for lib in self.read_file("books.JSON")[book]:
+            if lib in self.active_libs:
+                result.insert(0, geolocator.reverse(locations[lib]))
+            else:
+                result.append("not online " + str(geolocator.reverse(locations[lib])))
+        #print([geolocator.reverse(locations[lib]) for lib in self.read_file("books.JSON")[book]])
+        return result
+
+
