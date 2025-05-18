@@ -4,10 +4,10 @@ from threading import Thread
 import time
 import random
 
-from library.param import WEBSITE_PORT
+
 from param import *
 import ssl
-from geopy.geocoders import Nominatim
+#from geopy.geocoders import Nominatim
 
 class File: # this class is for writing / reading JSON file, later will be replaced by a DB class
     @staticmethod
@@ -51,6 +51,9 @@ class Server(File): # arranges the library connections
         print(soc, "    | this is the socket in question")
         soc.send("login".encode()) # asks for ID
         ans = soc.recv(1024).decode() # response is either ID or "new lib", which means that it need a new ID
+        analyze = ans.split("%")
+        ans = analyze[1]
+        location = analyze[0]
         print(ans, "    | this is the answer for the login question")
         if ans == "new lib":
             num = self.get_new_ID(soc) # gets a new ID for the library
@@ -67,8 +70,11 @@ class Server(File): # arranges the library connections
                 print(self.active_libs, "     | active numbers")
         print(soc.recv(1024).decode(), "    | checks if everything is correct")
         self.book_update((soc, num)) # loads the new library's books
+        library_locations = self.read_file("locations.JSON")  # loads the locations
+        library_locations[num] = (location,)
+        self.write_file("locations.JSON", library_locations)
         while True:
-            if self.check_connection((soc, num)): # runs main function
+            if self.library_connection((soc, num)): # runs main function
                 break
             time.sleep(5) # waits, because my computer is slow af and I don't want it to die
 
@@ -99,7 +105,7 @@ class Server(File): # arranges the library connections
         self.write_file("books.JSON", self.books)
 
 
-    def check_connection(self, lib): # this function holds everything together
+    def library_connection(self, lib): # this function holds everything together
         # lib is made out of a tuple, (soc, num)
         try:
             print(lib[0])
@@ -107,9 +113,9 @@ class Server(File): # arranges the library connections
             ans = lib[0].recv(1024).decode() # ans is either CHANGED or NO CHANGED, plus the library's location
             print(ans,"    | what to do")
 
-            library_locations = self.read_file("locations.JSON") # loads the locations
-            library_locations[lib[1]] = (ans.split("%")[0],)
-            self.write_file("locations.JSON", library_locations)
+            library_names = self.read_file("libraryNames.JSON") # loads the names
+            library_names[lib[1]] = (ans.split("%")[0],)
+            self.write_file("libraryNames.JSON", library_names)
 
             if ans.split("%")[-1] == "CHANGED":
                 self.book_update(lib)
@@ -133,29 +139,41 @@ class Server(File): # arranges the library connections
 
         @app.route('/')
         def index():
-            return render_template("index.html")
+            return render_template("index.html", libraries = list(self.read_file("libraries.JSON").keys()))
 
+        @app.route('/library/', methods=['GET'])
+        def get_library():
+            library = request.args["library"]
+            try:
+                books = self.read_file("libraries.JSON")[''.join(char for char in library if char.isdigit())]
+            except KeyError:
+                books = ["library not found"]
+            print(library)
+            print(books)
+            return render_template("library.html", books = books, library = library)
         @app.route('/search/', methods=['GET'])
-        def get():
+        def get_book():
             book = request.args["book"]
             print(book)
             try:
-                locations = self.search(book)
+                libraries = self.search(book)
             except KeyError:
-                locations = ["book not found"]
-            return render_template("search.html", locations=locations, book=book)
+                libraries = ["book not found"]
+            return render_template("search.html", libraries=libraries, book=book)
 
         app.run(ssl_context=('cert.pem', 'key.pem'), host=IP, port=WEBSITE_PORT)
 
     def search(self, book):
-        locations = self.read_file("locations.JSON")
-        geolocator = Nominatim(user_agent="library_useragent")
+        #locations = self.read_file("locations.JSON")
+        #geolocator = Nominatim(user_agent="library_useragent")
         result = []
         for lib in self.read_file("books.JSON")[book]:
             if lib in self.active_libs:
-                result.insert(0, geolocator.reverse(locations[lib]))
+                #result.insert(0, geolocator.reverse(locations[lib]))
+                result.insert(0, lib)
             else:
-                result.append("not online " + str(geolocator.reverse(locations[lib])))
+                #result.append("not online " + str(geolocator.reverse(locations[lib])))
+                result.append("not online " +  lib)
         #print([geolocator.reverse(locations[lib]) for lib in self.read_file("books.JSON")[book]])
         return result
 

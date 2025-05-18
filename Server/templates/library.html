@@ -1,21 +1,23 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>search</title>
 </head>
+
 <body>
-
-
+<a href="/"> main </a>
 <form action="/search/">
   <input type="text" placeholder="Search.." name="book">
   <button type="submit">Submit</button>
 </form>
-
-<h1><br> libraries</h1>
-<p><br><br>{% for line in libraries %}
-<a href="/library/?library={{ line }}">  {{ line }}  </a>
+<h1><br> {{ library }}</h1>
+<p><br><br>{% for line in books %}
+{{ line }}
 <br />
 {% endfor %}</p>
 
+
 </body>
+
 </html>

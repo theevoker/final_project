@@ -6,13 +6,14 @@
 </head>
 
 <body>
+<a href="/"> main </a>
 <form action="/search/">
   <input type="text" placeholder="Search.." name="book">
   <button type="submit">Submit</button>
 </form>
 <h1><br> {{ book }}</h1>
-<p><br><br>{% for line in locations %}
-{{ line }}
+<p><br><br>{% for line in libraries %}
+<a href="/library/?library={{ line }}">  {{ line }}  </a>
 <br />
 {% endfor %}</p>
 

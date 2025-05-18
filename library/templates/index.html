@@ -16,5 +16,18 @@
   <button type="submit">Submit</button>
 </form>
 
+<h1><br> {{ name }}</h1>
+<p><br><br>{% for line in books %}
+<a href="/remove_book/?book={{ line }}">  {{ line }}  </a>
+<br />
+{% endfor %}</p>
+
+
+<br><br><br><br><br><br><br><br>
+
+<form action="/developer/">
+  <button type="submit">Developer options</button>
+</form>
+
 </body>
 </html>
