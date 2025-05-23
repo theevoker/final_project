@@ -1,4 +1,5 @@
 import socket
+import time
 from threading import Thread
 import json
 import os
@@ -98,21 +99,27 @@ class Library:
 
 
         Thread(target=self.create_app().run(port=self.ID)).start()
-        while start: # yay loop wooooooo
-            quarry = con.recv(1024).decode() # server asks for something
-            print(quarry)
-            if quarry == "REPORT": # if so, the response is the name + whether the books changed or not
+        while 1: # yay loop wooooooo
+            try:
+                self.check_state(con)
+            except:
+                time.sleep(5)
 
-                if not self.book_changed:
-                    print(f"{self.name}%NO CHANGE")
-                    con.send(f"{self.name}%NO CHANGE".encode())
-                else:
-                    print(f"{self.name}%CHANGED")
-                    con.send(f"{self.name}%CHANGED".encode())
-                    self.book_changed = False
-            elif quarry == "BOOKS": # sends books
-                print("%".join(self.books))
-                con.send(("books:"+"%".join(self.books)).encode())
+    def check_state(self, con):
+        quarry = con.recv(1024).decode() # server asks for something
+        print(quarry)
+        if quarry == "REPORT": # if so, the response is the name + whether the books changed or not
+
+            if not self.book_changed:
+                print(f"{self.name}%NO CHANGE")
+                con.send(f"{self.name}%NO CHANGE".encode())
+            else:
+                print(f"{self.name}%CHANGED")
+                con.send(f"{self.name}%CHANGED".encode())
+                self.book_changed = False
+        elif quarry == "BOOKS": # sends books
+            print("%".join(self.books))
+            con.send(("books:"+"%".join(self.books)).encode())
     #physical methods
     def add_book(self, book): # adds book to file
         self.books.append(book)
