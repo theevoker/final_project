@@ -1,3 +1,1 @@
-import hashlib
-
-print(hashlib.sha1("1111".encode()).hexdigest())
+print([{"hello":"world", "2": 2}])

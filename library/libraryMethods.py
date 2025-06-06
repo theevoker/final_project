@@ -1,5 +1,4 @@
 import socket
-import time
 from threading import Thread
 import json
 import os
@@ -31,12 +30,12 @@ class Library:
 
     @staticmethod
     def read_file(file_name): # guess what
-        with open(file_name, 'r') as file:
+        with open(file_name, 'r', encoding='utf-8') as file:
             return json.load(file)
 
     @staticmethod # guess what
     def write_file(file_name, change):
-        with open(file_name, 'w') as file:
+        with open(file_name, 'w', encoding='utf-8') as file:
             file.write("{}")
         with open(file_name, 'w', encoding='utf-8') as file:
             json.dump(change, file, ensure_ascii=False, indent=4)
@@ -51,9 +50,8 @@ class Library:
         print(self.ID)
 
     def lib_exist(self, con): # guess what
-        location = self.get_location()  # gets location
-        libraries = json.load(open(self.file, 'r'))
-        con.send(f"{location}%{list(libraries.keys())[0]}".encode()) # sends ID
+        libraries = json.load(open(self.file, 'r', encoding='utf-8'))
+        con.send(f"{self.name}%{list(libraries.keys())[0]}".encode()) # sends ID
         ans = con.recv(1024).decode() # receives either the OK or a new ID
         print(ans)
         if ans == "True": # if got the ID
@@ -94,36 +92,30 @@ class Library:
 
 
 
-        self.books = list(json.load(open(self.file, 'r')).values())[0]
+        self.books = list(json.load(open(self.file, 'r', encoding='utf-8')).values())[0]
 
 
 
-        Thread(target=self.create_app().run(port=self.ID)).start()
-        while 1: # yay loop wooooooo
-            try:
-                self.check_state(con)
-            except:
-                time.sleep(5)
+        Thread(target=self.start_screen).start()
+        while start: # yay loop wooooooo
+            quarry = con.recv(1024).decode() # server asks for something
+            print(quarry)
+            if quarry == "REPORT": # if so, the response is the name + whether the books changed or not
 
-    def check_state(self, con):
-        quarry = con.recv(1024).decode() # server asks for something
-        print(quarry)
-        if quarry == "REPORT": # if so, the response is the name + whether the books changed or not
-
-            if not self.book_changed:
-                print(f"{self.name}%NO CHANGE")
-                con.send(f"{self.name}%NO CHANGE".encode())
-            else:
-                print(f"{self.name}%CHANGED")
-                con.send(f"{self.name}%CHANGED".encode())
-                self.book_changed = False
-        elif quarry == "BOOKS": # sends books
-            print("%".join(self.books))
-            con.send(("books:"+"%".join(self.books)).encode())
+                if not self.book_changed:
+                    print(f"{self.name}%NO CHANGE")
+                    con.send(f"{self.name}%NO CHANGE".encode())
+                else:
+                    print(f"{self.name}%CHANGED")
+                    con.send(f"{self.name}%CHANGED".encode())
+                    self.book_changed = False
+            elif quarry == "BOOKS": # sends books
+                print("%".join(self.books))
+                con.send(("books:"+"%".join(self.books)).encode())
     #physical methods
     def add_book(self, book): # adds book to file
         self.books.append(book)
-        self.write_file(self.file, {self.ID:self.books})
+        self.write_file(self.file, {self.ID:self.books, "name":self.name})
         self.book_changed = True
 
 
@@ -200,3 +192,6 @@ class Library:
                 return render_template("result.html", result="Book removed")
 
         return app
+
+    def start_screen(self):
+        self.create_app().run(port=int(self.ID))
